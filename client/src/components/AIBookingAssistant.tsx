@@ -6,11 +6,13 @@ import { useData } from '../contexts/DataContext';
 interface ParsedBooking {
   id: string;
   clientName: string;
+  clientPhone?: string;
   date: string;
   time: string;
   pickupLocation: string;
   dropoffLocation: string;
   passengers: number;
+  carType?: string;
   price?: number;
   description?: string;
 }
@@ -98,11 +100,13 @@ export default function AIBookingAssistant() {
 
     const systemPrompt = `You are a booking data extraction assistant. Extract booking information and return ONLY a valid JSON array of bookings. Each booking must have these fields:
 - clientName (string)
+- clientPhone (string, optional - phone number, email, or contact info)
 - date (YYYY-MM-DD format)
 - time (HH:MM format, 24-hour)
 - pickupLocation (string)
 - dropoffLocation (string)
 - passengers (number)
+- carType (string, optional - vehicle type like "Saloon", "Estate", "MPV", "Van", "People Carrier", "Large People Carrier", etc.)
 - price (number, optional)
 - description (string, optional)
 
@@ -158,17 +162,27 @@ Return ONLY the JSON array, no other text.`;
 
     const bookings = JSON.parse(jsonMatch[0]);
 
-    return bookings.map((booking: any, index: number) => ({
-      id: `temp-${Date.now()}-${index}`,
-      clientName: booking.clientName || 'Unknown Client',
-      date: booking.date || new Date().toISOString().split('T')[0],
-      time: booking.time || '12:00',
-      pickupLocation: booking.pickupLocation || '',
-      dropoffLocation: booking.dropoffLocation || '',
-      passengers: booking.passengers || 1,
-      price: booking.price,
-      description: booking.description
-    }));
+    return bookings.map((booking: any, index: number) => {
+      let carType = booking.carType || '';
+      const carTypeLower = carType.toLowerCase();
+      if (carTypeLower.includes('people carrier') || carTypeLower.includes('peoplecarrier')) {
+        carType = 'VAN';
+      }
+
+      return {
+        id: `temp-${Date.now()}-${index}`,
+        clientName: booking.clientName || 'Unknown Client',
+        clientPhone: booking.clientPhone || '',
+        date: booking.date || new Date().toISOString().split('T')[0],
+        time: booking.time || '12:00',
+        pickupLocation: booking.pickupLocation || '',
+        dropoffLocation: booking.dropoffLocation || '',
+        passengers: booking.passengers || 1,
+        carType: carType,
+        price: booking.price,
+        description: booking.description
+      };
+    });
   };
 
   const handleSaveBooking = async (booking: ParsedBooking) => {
@@ -185,10 +199,10 @@ Return ONLY the JSON array, no other text.`;
         passengers: booking.passengers,
         pickupLocation: booking.pickupLocation,
         dropoffLocation: booking.dropoffLocation,
-        carType: '',
+        carType: booking.carType || '',
         price: booking.price || 0,
         clientName: booking.clientName,
-        clientPhone: '',
+        clientPhone: booking.clientPhone || '',
         paymentStatus: 'charge'
       });
 
@@ -401,6 +415,18 @@ Return ONLY the JSON array, no other text.`;
                           <span className="text-gray-500">Passengers:</span>
                           <span className="ml-2 text-gray-900">{booking.passengers}</span>
                         </div>
+                        {booking.clientPhone && (
+                          <div>
+                            <span className="text-gray-500">Contact:</span>
+                            <span className="ml-2 text-gray-900">{booking.clientPhone}</span>
+                          </div>
+                        )}
+                        {booking.carType && (
+                          <div>
+                            <span className="text-gray-500">Car Type:</span>
+                            <span className="ml-2 text-gray-900">{booking.carType}</span>
+                          </div>
+                        )}
                         {booking.price && (
                           <div>
                             <span className="text-gray-500">Price:</span>
