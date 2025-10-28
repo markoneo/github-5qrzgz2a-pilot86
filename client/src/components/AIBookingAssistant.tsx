@@ -24,6 +24,7 @@ export default function AIBookingAssistant() {
   const [parsedBookings, setParsedBookings] = useState<ParsedBooking[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [summary, setSummary] = useState<string>('');
+  const [savingBookings, setSavingBookings] = useState<Set<string>>(new Set());
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -170,8 +171,46 @@ Return ONLY the JSON array, no other text.`;
     }));
   };
 
-  const handleSaveBooking = (booking: ParsedBooking) => {
-    setParsedBookings(prev => prev.filter(b => b.id !== booking.id));
+  const handleSaveBooking = async (booking: ParsedBooking) => {
+    try {
+      setSavingBookings(prev => new Set(prev).add(booking.id));
+      setError(null);
+
+      await addProject({
+        company: '',
+        description: booking.description || `AI imported booking for ${booking.clientName}`,
+        driver: '',
+        date: booking.date,
+        time: booking.time,
+        passengers: booking.passengers,
+        pickupLocation: booking.pickupLocation,
+        dropoffLocation: booking.dropoffLocation,
+        carType: '',
+        price: booking.price || 0,
+        clientName: booking.clientName,
+        clientPhone: '',
+        paymentStatus: 'charge'
+      });
+
+      setParsedBookings(prev => prev.filter(b => b.id !== booking.id));
+      setSummary(`Successfully saved booking for ${booking.clientName}!`);
+
+      setTimeout(() => setSummary(''), 3000);
+    } catch (err) {
+      setError(`Failed to save booking: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    } finally {
+      setSavingBookings(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(booking.id);
+        return newSet;
+      });
+    }
+  };
+
+  const handleSaveAllBookings = async () => {
+    for (const booking of parsedBookings) {
+      await handleSaveBooking(booking);
+    }
   };
 
   const handleRemoveBooking = (bookingId: string) => {
@@ -284,10 +323,26 @@ Return ONLY the JSON array, no other text.`;
 
           <div className="lg:col-span-2">
             <div className="bg-white/70 backdrop-blur-md rounded-2xl border border-white/20 shadow-lg p-6">
-              <h2 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
-                <FileText className="w-5 h-5 text-blue-600" />
-                Extracted Bookings
-              </h2>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-blue-600" />
+                  Extracted Bookings
+                </h2>
+                {parsedBookings.length > 0 && (
+                  <button
+                    onClick={handleSaveAllBookings}
+                    disabled={savingBookings.size > 0}
+                    className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Upload className="w-4 h-4" />
+                    Save All to Projects
+                  </button>
+                )}
+              </div>
+
+              {parsedBookings.length > 0 && (
+                <p className="text-sm text-gray-600 mb-4">{parsedBookings.length} booking(s) ready to save</p>
+              )}
 
               {parsedBookings.length === 0 ? (
                 <div className="text-center py-12">
@@ -304,14 +359,20 @@ Return ONLY the JSON array, no other text.`;
                         <div className="flex gap-2">
                           <button
                             onClick={() => handleSaveBooking(booking)}
-                            className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                            disabled={savingBookings.has(booking.id)}
+                            className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                             title="Save to projects"
                           >
-                            <CheckCircle className="w-5 h-5" />
+                            {savingBookings.has(booking.id) ? (
+                              <Loader2 className="w-5 h-5 animate-spin" />
+                            ) : (
+                              <CheckCircle className="w-5 h-5" />
+                            )}
                           </button>
                           <button
                             onClick={() => handleRemoveBooking(booking.id)}
-                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            disabled={savingBookings.has(booking.id)}
+                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                             title="Remove"
                           >
                             <X className="w-5 h-5" />
