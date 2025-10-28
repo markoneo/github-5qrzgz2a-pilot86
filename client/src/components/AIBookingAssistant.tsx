@@ -19,7 +19,7 @@ interface ParsedBooking {
 
 export default function AIBookingAssistant() {
   const navigate = useNavigate();
-  const { addProject } = useData();
+  const { addProject, carTypes } = useData();
   const [apiKey, setApiKey] = useState(localStorage.getItem('openai_api_key') || '');
   const [file, setFile] = useState<File | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -190,6 +190,16 @@ Return ONLY the JSON array, no other text.`;
       setSavingBookings(prev => new Set(prev).add(booking.id));
       setError(null);
 
+      let carTypeId = '';
+      if (booking.carType && carTypes.length > 0) {
+        const matchingCarType = carTypes.find(
+          ct => ct.type.toLowerCase() === booking.carType?.toLowerCase()
+        );
+        if (matchingCarType) {
+          carTypeId = matchingCarType.id;
+        }
+      }
+
       await addProject({
         company: '',
         description: booking.description || `AI imported booking for ${booking.clientName}`,
@@ -199,7 +209,7 @@ Return ONLY the JSON array, no other text.`;
         passengers: booking.passengers,
         pickupLocation: booking.pickupLocation,
         dropoffLocation: booking.dropoffLocation,
-        carType: booking.carType || '',
+        carType: carTypeId,
         price: booking.price || 0,
         clientName: booking.clientName,
         clientPhone: booking.clientPhone || '',
