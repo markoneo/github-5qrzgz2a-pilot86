@@ -164,7 +164,7 @@ Return ONLY the JSON array, no other text.`;
 
     return bookings.map((booking: any, index: number) => {
       let carType = booking.carType || '';
-      const carTypeLower = carType.toLowerCase();
+      const carTypeLower = (carType || '').toString().toLowerCase();
 
       if (carTypeLower.includes('people carrier') ||
           carTypeLower.includes('peoplecarrier') ||
