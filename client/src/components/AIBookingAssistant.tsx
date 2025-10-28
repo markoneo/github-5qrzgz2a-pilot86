@@ -211,8 +211,9 @@ Return ONLY the JSON array, no other text.`;
 
       let carTypeId = '';
       if (booking.carType && carTypes.length > 0) {
+        const bookingCarTypeLower = (booking.carType || '').toString().toLowerCase();
         const matchingCarType = carTypes.find(
-          ct => ct.type.toLowerCase() === booking.carType?.toLowerCase()
+          ct => ct.type && ct.type.toLowerCase() === bookingCarTypeLower
         );
         if (matchingCarType) {
           carTypeId = matchingCarType.id;
