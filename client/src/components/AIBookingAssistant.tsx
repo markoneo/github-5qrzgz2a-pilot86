@@ -22,6 +22,8 @@ export default function AIBookingAssistant() {
   const { addProject, carTypes } = useData();
   const [apiKey, setApiKey] = useState(localStorage.getItem('openai_api_key') || '');
   const [file, setFile] = useState<File | null>(null);
+  const [textInput, setTextInput] = useState<string>('');
+  const [inputMode, setInputMode] = useState<'file' | 'text'>('file');
   const [isProcessing, setIsProcessing] = useState(false);
   const [parsedBookings, setParsedBookings] = useState<ParsedBooking[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -52,8 +54,18 @@ export default function AIBookingAssistant() {
   };
 
   const processFile = async () => {
-    if (!file || !apiKey) {
-      setError('Please provide both an API key and a file');
+    if (!apiKey) {
+      setError('Please provide an API key');
+      return;
+    }
+
+    if (inputMode === 'file' && !file) {
+      setError('Please upload a file');
+      return;
+    }
+
+    if (inputMode === 'text' && !textInput.trim()) {
+      setError('Please paste booking information');
       return;
     }
 
@@ -61,13 +73,23 @@ export default function AIBookingAssistant() {
     setError(null);
 
     try {
-      const fileContent = await readFileContent(file);
-      const bookings = await analyzeWithAI(fileContent, file.type);
+      let fileContent: string;
+      let fileType: string;
+
+      if (inputMode === 'text') {
+        fileContent = textInput;
+        fileType = 'text/plain';
+      } else {
+        fileContent = await readFileContent(file!);
+        fileType = file!.type;
+      }
+
+      const bookings = await analyzeWithAI(fileContent, fileType);
 
       setParsedBookings(bookings);
-      setSummary(`Successfully parsed ${bookings.length} booking(s) from the file`);
+      setSummary(`Successfully parsed ${bookings.length} booking(s) from the ${inputMode === 'text' ? 'text' : 'file'}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to process file');
+      setError(err instanceof Error ? err.message : 'Failed to process input');
     } finally {
       setIsProcessing(false);
     }
@@ -276,7 +298,7 @@ Return ONLY the JSON array, no other text.`;
             AI Booking Assistant
           </h1>
           <p className="text-slate-600">
-            Upload CSV or images of booking data and let AI extract the information
+            Upload CSV or images, or paste booking data and let AI extract the information
           </p>
         </div>
 
@@ -308,32 +330,65 @@ Return ONLY the JSON array, no other text.`;
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Upload File
-                </label>
-                <div className="relative">
-                  <input
-                    type="file"
-                    accept=".csv,.png,.jpg,.jpeg"
-                    onChange={handleFileChange}
-                    className="hidden"
-                    id="file-upload"
-                  />
-                  <label
-                    htmlFor="file-upload"
-                    className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-blue-500 transition-colors"
+                <div className="flex gap-2 mb-3">
+                  <button
+                    onClick={() => setInputMode('file')}
+                    className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors ${
+                      inputMode === 'file'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
                   >
-                    <Upload className="w-8 h-8 text-gray-400 mb-2" />
-                    <span className="text-sm text-gray-600">
-                      {file ? file.name : 'Click to upload CSV or PNG/JPG'}
-                    </span>
-                  </label>
+                    <Upload className="w-4 h-4 inline mr-2" />
+                    Upload File
+                  </button>
+                  <button
+                    onClick={() => setInputMode('text')}
+                    className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors ${
+                      inputMode === 'text'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    <FileText className="w-4 h-4 inline mr-2" />
+                    Paste Text
+                  </button>
                 </div>
+
+                {inputMode === 'file' ? (
+                  <div className="relative">
+                    <input
+                      type="file"
+                      accept=".csv,.png,.jpg,.jpeg"
+                      onChange={handleFileChange}
+                      className="hidden"
+                      id="file-upload"
+                    />
+                    <label
+                      htmlFor="file-upload"
+                      className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-blue-500 transition-colors"
+                    >
+                      <Upload className="w-8 h-8 text-gray-400 mb-2" />
+                      <span className="text-sm text-gray-600">
+                        {file ? file.name : 'Click to upload CSV or PNG/JPG'}
+                      </span>
+                    </label>
+                  </div>
+                ) : (
+                  <div>
+                    <textarea
+                      value={textInput}
+                      onChange={(e) => setTextInput(e.target.value)}
+                      placeholder="Paste your booking information here...&#10;&#10;Example:&#10;Client: John Doe&#10;Date: 2025-11-06&#10;Time: 19:00&#10;Pickup: Venice Airport&#10;Dropoff: YouMe Design Place Hotel&#10;..."
+                      className="w-full h-32 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none text-sm"
+                    />
+                  </div>
+                )}
               </div>
 
               <button
                 onClick={processFile}
-                disabled={!file || !apiKey || isProcessing}
+                disabled={(!file && !textInput.trim()) || !apiKey || isProcessing}
                 className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-3 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isProcessing ? (
