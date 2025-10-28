@@ -1,23 +1,23 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { 
-  Plus, 
-  MapPin, 
-  Users, 
-  Edit, 
-  Eye, 
-  Trash2, 
-  Play, 
-  Check, 
-  Car, 
-  Home, 
-  BarChart2, 
-  Settings, 
-  LogOut, 
-  Search, 
-  X, 
-  FileText, 
-  DollarSign, 
-  RefreshCw, 
+import {
+  Plus,
+  MapPin,
+  Users,
+  Edit,
+  Eye,
+  Trash2,
+  Play,
+  Check,
+  Car,
+  Home,
+  BarChart2,
+  Settings,
+  LogOut,
+  Search,
+  X,
+  FileText,
+  DollarSign,
+  RefreshCw,
   AlertCircle,
   Calendar,
   Clock,
@@ -30,7 +30,7 @@ import {
   Grid3X3,
   List,
   Map,
-  
+  Bot,
   Settings2
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -571,9 +571,10 @@ export default function Dashboard() {
                 </h3>
                 <div className="space-y-3">
                   {[
+                    { icon: Bot, label: "AI Booking Assistant", action: () => navigate('/ai-assistant'), color: "blue" },
                     { icon: BarChart2, label: "Statistics", action: () => navigate('/statistics'), color: "emerald" },
                     { icon: FileText, label: "Financial Report", action: () => navigate('/financial-report'), color: "purple" },
-                    { icon: Users, label: "Manage Drivers", action: () => navigate('/settings/drivers'), color: "blue" },
+                    { icon: Users, label: "Manage Drivers", action: () => navigate('/settings/drivers'), color: "teal" },
                     { icon: Settings, label: "Settings", action: () => navigate('/settings/companies'), color: "amber" }
                   ].map((action, index) => {
                     const Icon = action.icon;

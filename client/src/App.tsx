@@ -37,15 +37,16 @@ const VoucherGenerator = lazy(() => import('./components/VoucherGenerator'));
 const FinancialReport = lazy(() => import('./components/FinancialReport'));
 const DriverApp = lazy(() => import('./components/driver/DriverApp'));
 const DirectDriverAuth = lazy(() => import('./components/driver/DirectDriverAuth'));
+const AIBookingAssistant = lazy(() => import('./components/AIBookingAssistant'));
 
 // Custom component to conditionally render the footer
 function AppContent() {
   const location = useLocation();
   
   // Check if the route is a dashboard route where footer should be hidden
-  const isDashboardRoute = 
-    location.pathname.includes('/dashboard') || 
-    location.pathname.includes('/new-project') || 
+  const isDashboardRoute =
+    location.pathname.includes('/dashboard') ||
+    location.pathname.includes('/new-project') ||
     location.pathname.includes('/edit-project') ||
     location.pathname.includes('/settings') ||
     location.pathname.includes('/statistics') ||
@@ -53,6 +54,7 @@ function AppContent() {
     location.pathname.includes('/completed-projects') ||
     location.pathname.includes('/voucher') ||
     location.pathname.includes('/ui-mockup') ||
+    location.pathname.includes('/ai-assistant') ||
     location.pathname.includes('/driver');
 
   // Fix iOS touch events when component mounts
@@ -120,6 +122,7 @@ function AppContent() {
               <Route path="/settings/payments" element={<ProtectedRoute><Payments /></ProtectedRoute>} />
               <Route path="/settings/notifications" element={<ProtectedRoute><NotificationSettings /></ProtectedRoute>} />
               <Route path="/completed-projects" element={<ProtectedRoute><CompletedProjects /></ProtectedRoute>} />
+              <Route path="/ai-assistant" element={<ProtectedRoute><AIBookingAssistant /></ProtectedRoute>} />
               <Route path="/ui-mockup" element={<UIDesignMockup />} />
               <Route path="/driver" element={<DriverApp />} />
             </Routes>

@@ -1,0 +1,367 @@
+import React, { useState } from 'react';
+import { Upload, FileText, Bot, Loader2, CheckCircle, AlertCircle, X, Save } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { useData } from '../contexts/DataContext';
+
+interface ParsedBooking {
+  id: string;
+  clientName: string;
+  date: string;
+  time: string;
+  pickupLocation: string;
+  dropoffLocation: string;
+  passengers: number;
+  price?: number;
+  description?: string;
+}
+
+export default function AIBookingAssistant() {
+  const navigate = useNavigate();
+  const { addProject } = useData();
+  const [apiKey, setApiKey] = useState(localStorage.getItem('openai_api_key') || '');
+  const [file, setFile] = useState<File | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [parsedBookings, setParsedBookings] = useState<ParsedBooking[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [summary, setSummary] = useState<string>('');
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = e.target.files?.[0];
+    if (selectedFile) {
+      const fileType = selectedFile.type;
+      const fileName = selectedFile.name.toLowerCase();
+
+      if (fileName.endsWith('.csv') || fileName.endsWith('.png') || fileName.endsWith('.jpg') || fileName.endsWith('.jpeg')) {
+        setFile(selectedFile);
+        setError(null);
+      } else {
+        setError('Please upload a CSV or PNG/JPG image file');
+        setFile(null);
+      }
+    }
+  };
+
+  const handleSaveApiKey = () => {
+    if (apiKey.trim()) {
+      localStorage.setItem('openai_api_key', apiKey.trim());
+      alert('API Key saved successfully!');
+    }
+  };
+
+  const processFile = async () => {
+    if (!file || !apiKey) {
+      setError('Please provide both an API key and a file');
+      return;
+    }
+
+    setIsProcessing(true);
+    setError(null);
+
+    try {
+      const fileContent = await readFileContent(file);
+      const bookings = await analyzeWithAI(fileContent, file.type);
+
+      setParsedBookings(bookings);
+      setSummary(`Successfully parsed ${bookings.length} booking(s) from the file`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to process file');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const readFileContent = async (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+
+      if (file.type.includes('image')) {
+        reader.onload = () => {
+          const base64 = reader.result as string;
+          resolve(base64);
+        };
+        reader.onerror = () => reject(new Error('Failed to read image file'));
+        reader.readAsDataURL(file);
+      } else {
+        reader.onload = () => {
+          const text = reader.result as string;
+          resolve(text);
+        };
+        reader.onerror = () => reject(new Error('Failed to read CSV file'));
+        reader.readAsText(file);
+      }
+    });
+  };
+
+  const analyzeWithAI = async (content: string, fileType: string): Promise<ParsedBooking[]> => {
+    const isImage = fileType.includes('image');
+
+    const systemPrompt = `You are a booking data extraction assistant. Extract booking information and return ONLY a valid JSON array of bookings. Each booking must have these fields:
+- clientName (string)
+- date (YYYY-MM-DD format)
+- time (HH:MM format, 24-hour)
+- pickupLocation (string)
+- dropoffLocation (string)
+- passengers (number)
+- price (number, optional)
+- description (string, optional)
+
+Return ONLY the JSON array, no other text.`;
+
+    const userPrompt = isImage
+      ? 'Extract all booking information from this image.'
+      : `Extract all booking information from this CSV data:\n\n${content}`;
+
+    const messages: any[] = [
+      { role: 'system', content: systemPrompt },
+      {
+        role: 'user',
+        content: isImage
+          ? [
+              { type: 'text', text: userPrompt },
+              { type: 'image_url', image_url: { url: content } }
+            ]
+          : userPrompt
+      }
+    ];
+
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model: isImage ? 'gpt-4o' : 'gpt-4o-mini',
+        messages,
+        temperature: 0.1,
+        max_tokens: 2000
+      })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error?.message || 'Failed to analyze file with AI');
+    }
+
+    const data = await response.json();
+    const aiResponse = data.choices[0]?.message?.content;
+
+    if (!aiResponse) {
+      throw new Error('No response from AI');
+    }
+
+    const jsonMatch = aiResponse.match(/\[[\s\S]*\]/);
+    if (!jsonMatch) {
+      throw new Error('AI did not return valid JSON. Please try again.');
+    }
+
+    const bookings = JSON.parse(jsonMatch[0]);
+
+    return bookings.map((booking: any, index: number) => ({
+      id: `temp-${Date.now()}-${index}`,
+      clientName: booking.clientName || 'Unknown Client',
+      date: booking.date || new Date().toISOString().split('T')[0],
+      time: booking.time || '12:00',
+      pickupLocation: booking.pickupLocation || '',
+      dropoffLocation: booking.dropoffLocation || '',
+      passengers: booking.passengers || 1,
+      price: booking.price,
+      description: booking.description
+    }));
+  };
+
+  const handleSaveBooking = (booking: ParsedBooking) => {
+    setParsedBookings(prev => prev.filter(b => b.id !== booking.id));
+  };
+
+  const handleRemoveBooking = (bookingId: string) => {
+    setParsedBookings(prev => prev.filter(b => b.id !== bookingId));
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 pt-16">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-20 md:pb-8">
+        <div className="mb-8">
+          <button
+            onClick={() => navigate('/dashboard')}
+            className="text-blue-600 hover:text-blue-800 mb-4 flex items-center gap-2"
+          >
+            ← Back to Dashboard
+          </button>
+
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent mb-2">
+            AI Booking Assistant
+          </h1>
+          <p className="text-slate-600">
+            Upload CSV or images of booking data and let AI extract the information
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-1">
+            <div className="bg-white/70 backdrop-blur-md rounded-2xl border border-white/20 shadow-lg p-6 space-y-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  OpenAI API Key
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="password"
+                    value={apiKey}
+                    onChange={(e) => setApiKey(e.target.value)}
+                    placeholder="sk-..."
+                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                  <button
+                    onClick={handleSaveApiKey}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    <Save className="w-4 h-4" />
+                  </button>
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  Your API key is stored locally in your browser
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Upload File
+                </label>
+                <div className="relative">
+                  <input
+                    type="file"
+                    accept=".csv,.png,.jpg,.jpeg"
+                    onChange={handleFileChange}
+                    className="hidden"
+                    id="file-upload"
+                  />
+                  <label
+                    htmlFor="file-upload"
+                    className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-blue-500 transition-colors"
+                  >
+                    <Upload className="w-8 h-8 text-gray-400 mb-2" />
+                    <span className="text-sm text-gray-600">
+                      {file ? file.name : 'Click to upload CSV or PNG/JPG'}
+                    </span>
+                  </label>
+                </div>
+              </div>
+
+              <button
+                onClick={processFile}
+                disabled={!file || !apiKey || isProcessing}
+                className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-3 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isProcessing ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    <Bot className="w-5 h-5" />
+                    Analyze with AI
+                  </>
+                )}
+              </button>
+
+              {error && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-2">
+                  <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                  <p className="text-sm text-red-700">{error}</p>
+                </div>
+              )}
+
+              {summary && (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-start gap-2">
+                  <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                  <p className="text-sm text-green-700">{summary}</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="lg:col-span-2">
+            <div className="bg-white/70 backdrop-blur-md rounded-2xl border border-white/20 shadow-lg p-6">
+              <h2 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
+                <FileText className="w-5 h-5 text-blue-600" />
+                Extracted Bookings
+              </h2>
+
+              {parsedBookings.length === 0 ? (
+                <div className="text-center py-12">
+                  <Bot className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-500">No bookings extracted yet</p>
+                  <p className="text-sm text-gray-400 mt-2">Upload a file and analyze it to see results</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {parsedBookings.map((booking) => (
+                    <div key={booking.id} className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
+                      <div className="flex items-start justify-between mb-3">
+                        <h3 className="text-lg font-semibold text-gray-900">{booking.clientName}</h3>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleSaveBooking(booking)}
+                            className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                            title="Save to projects"
+                          >
+                            <CheckCircle className="w-5 h-5" />
+                          </button>
+                          <button
+                            onClick={() => handleRemoveBooking(booking.id)}
+                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            title="Remove"
+                          >
+                            <X className="w-5 h-5" />
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3 text-sm">
+                        <div>
+                          <span className="text-gray-500">Date:</span>
+                          <span className="ml-2 text-gray-900">{booking.date}</span>
+                        </div>
+                        <div>
+                          <span className="text-gray-500">Time:</span>
+                          <span className="ml-2 text-gray-900">{booking.time}</span>
+                        </div>
+                        <div>
+                          <span className="text-gray-500">Pickup:</span>
+                          <span className="ml-2 text-gray-900">{booking.pickupLocation}</span>
+                        </div>
+                        <div>
+                          <span className="text-gray-500">Dropoff:</span>
+                          <span className="ml-2 text-gray-900">{booking.dropoffLocation}</span>
+                        </div>
+                        <div>
+                          <span className="text-gray-500">Passengers:</span>
+                          <span className="ml-2 text-gray-900">{booking.passengers}</span>
+                        </div>
+                        {booking.price && (
+                          <div>
+                            <span className="text-gray-500">Price:</span>
+                            <span className="ml-2 text-gray-900">€{booking.price}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {booking.description && (
+                        <div className="mt-3 pt-3 border-t border-gray-200">
+                          <span className="text-gray-500 text-sm">Notes:</span>
+                          <p className="text-gray-900 text-sm mt-1">{booking.description}</p>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
