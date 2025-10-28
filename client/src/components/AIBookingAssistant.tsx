@@ -106,7 +106,7 @@ export default function AIBookingAssistant() {
 - pickupLocation (string)
 - dropoffLocation (string)
 - passengers (number)
-- carType (string, optional - vehicle type like "Saloon", "Estate", "MPV", "Van", "People Carrier", "Large People Carrier", etc.)
+- carType (string, optional - vehicle type. Use these exact values: "STANDARD", "EXECUTIVE", "VAN", "MINIBUS". Map common variations like "Saloon/Estate/Car" to "STANDARD", "Premium/Luxury/First Class" to "EXECUTIVE", "People Carrier/Large People Carrier/MPV/8-seater" to "VAN", "Minibus/Coach/Large Group" to "MINIBUS")
 - price (number, optional)
 - description (string, optional)
 
@@ -165,8 +165,27 @@ Return ONLY the JSON array, no other text.`;
     return bookings.map((booking: any, index: number) => {
       let carType = booking.carType || '';
       const carTypeLower = carType.toLowerCase();
-      if (carTypeLower.includes('people carrier') || carTypeLower.includes('peoplecarrier')) {
+
+      if (carTypeLower.includes('people carrier') ||
+          carTypeLower.includes('peoplecarrier') ||
+          carTypeLower.includes('mpv') ||
+          carTypeLower.includes('8-seater') ||
+          carTypeLower.includes('8 seater')) {
         carType = 'VAN';
+      } else if (carTypeLower.includes('saloon') ||
+                 carTypeLower.includes('estate') ||
+                 carTypeLower.includes('sedan') ||
+                 carTypeLower.includes('car')) {
+        carType = 'STANDARD';
+      } else if (carTypeLower.includes('executive') ||
+                 carTypeLower.includes('premium') ||
+                 carTypeLower.includes('luxury') ||
+                 carTypeLower.includes('first class')) {
+        carType = 'EXECUTIVE';
+      } else if (carTypeLower.includes('minibus') ||
+                 carTypeLower.includes('coach') ||
+                 carTypeLower.includes('large group')) {
+        carType = 'MINIBUS';
       }
 
       return {
