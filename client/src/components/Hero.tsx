@@ -153,7 +153,7 @@ export default function Hero() {
               </span>
             </motion.h1>
             
-            <motion.p 
+            <motion.p
               variants={paragraphVariants}
               className="mt-6 text-xl text-gray-700 leading-relaxed max-w-2xl"
             >
@@ -162,6 +162,46 @@ export default function Hero() {
                 ✨ Trusted by 500+ transportation companies worldwide
               </span>
             </motion.p>
+
+            {/* AI Future Section */}
+            <motion.div
+              variants={paragraphVariants}
+              className="mt-8 bg-gradient-to-r from-blue-50 to-cyan-50 rounded-2xl p-6 border border-blue-100 shadow-lg"
+            >
+              <div className="space-y-4">
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900 mb-2">
+                    We made RidePilot dispatch software smarter.
+                  </h3>
+                  <p className="text-2xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
+                    No more manual entries.
+                  </p>
+                </div>
+
+                <div className="border-t border-blue-200 pt-4">
+                  <div className="flex items-start space-x-3 mb-3">
+                    <span className="text-2xl">😩</span>
+                    <div>
+                      <p className="font-semibold text-gray-800">Problem</p>
+                      <p className="text-gray-600">"Typing every new transfer into the system?"</p>
+                      <p className="text-gray-900 font-medium">"Not anymore."</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-xl p-4 shadow-md">
+                  <div className="flex items-start space-x-3">
+                    <span className="text-2xl">🤖</span>
+                    <div>
+                      <p className="font-semibold text-gray-800 mb-2">Solution</p>
+                      <p className="text-gray-900 font-bold mb-1">"Meet your new AI Assistant."</p>
+                      <p className="text-gray-600 mb-1">"Just send a text or image — it does the rest."</p>
+                      <p className="text-green-600 font-semibold">"Automatically adds it into your RidePilot dashboard."</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
 
             {/* Enhanced Key Features List */}
             <motion.div
