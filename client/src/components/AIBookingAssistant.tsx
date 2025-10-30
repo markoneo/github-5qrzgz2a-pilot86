@@ -19,7 +19,7 @@ interface ParsedBooking {
 
 export default function AIBookingAssistant() {
   const navigate = useNavigate();
-  const { addProject, carTypes } = useData();
+  const { addProject, carTypes, companies } = useData();
   const [apiKey, setApiKey] = useState(localStorage.getItem('openai_api_key') || '');
   const [file, setFile] = useState<File | null>(null);
   const [textInput, setTextInput] = useState<string>('');
@@ -29,6 +29,7 @@ export default function AIBookingAssistant() {
   const [error, setError] = useState<string | null>(null);
   const [summary, setSummary] = useState<string>('');
   const [savingBookings, setSavingBookings] = useState<Set<string>>(new Set());
+  const [selectedCompany, setSelectedCompany] = useState<string>('');
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -243,8 +244,9 @@ Return ONLY the JSON array, no other text.`;
       }
 
       await addProject({
-        company: '',
+        company: selectedCompany,
         description: booking.description || `AI imported booking for ${booking.clientName}`,
+        bookingId: `AI-${Date.now()}`,
         driver: '',
         date: booking.date,
         time: booking.time,
@@ -305,6 +307,27 @@ Return ONLY the JSON array, no other text.`;
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-1">
             <div className="bg-white/70 backdrop-blur-md rounded-2xl border border-white/20 shadow-lg p-6 space-y-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Select Company
+                </label>
+                <select
+                  value={selectedCompany}
+                  onChange={(e) => setSelectedCompany(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent mb-4"
+                >
+                  <option value="">-- Select Company --</option>
+                  {companies.map((company) => (
+                    <option key={company.id} value={company.id}>
+                      {company.name}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-xs text-gray-500 mb-6">
+                  All extracted bookings will be saved with this company
+                </p>
+              </div>
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   OpenAI API Key
@@ -388,7 +411,7 @@ Return ONLY the JSON array, no other text.`;
 
               <button
                 onClick={processFile}
-                disabled={(!file && !textInput.trim()) || !apiKey || isProcessing}
+                disabled={(!file && !textInput.trim()) || !apiKey || isProcessing || !selectedCompany}
                 className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-3 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isProcessing ? (
@@ -403,6 +426,13 @@ Return ONLY the JSON array, no other text.`;
                   </>
                 )}
               </button>
+
+              {!selectedCompany && (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex items-start gap-2">
+                  <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+                  <p className="text-sm text-yellow-700">Please select a company before analyzing bookings</p>
+                </div>
+              )}
 
               {error && (
                 <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-2">
@@ -440,7 +470,14 @@ Return ONLY the JSON array, no other text.`;
               </div>
 
               {parsedBookings.length > 0 && (
-                <p className="text-sm text-gray-600 mb-4">{parsedBookings.length} booking(s) ready to save</p>
+                <div className="mb-4">
+                  <p className="text-sm text-gray-600">{parsedBookings.length} booking(s) ready to save</p>
+                  {selectedCompany && (
+                    <p className="text-sm text-blue-600 font-medium mt-1">
+                      Will be saved to: {companies.find(c => c.id === selectedCompany)?.name}
+                    </p>
+                  )}
+                </div>
               )}
 
               {parsedBookings.length === 0 ? (
