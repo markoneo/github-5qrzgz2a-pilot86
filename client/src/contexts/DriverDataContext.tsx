@@ -44,6 +44,7 @@ interface DriverDataContextType {
   refreshProjects: () => Promise<void>;
   updateProjectStatus: (projectId: string, status: 'accepted' | 'started' | 'declined' | 'completed') => Promise<void>;
   retryCount: number;
+  driverInfo: any;
 }
 
 const DriverDataContext = createContext<DriverDataContextType | null>(null);
@@ -69,6 +70,7 @@ export function DriverDataProvider({ children, driverId, driverUuid }: DriverDat
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
+  const [driverInfo, setDriverInfo] = useState<any>(null);
 
   // Fetch driver-specific projects
   const fetchDriverProjects = useCallback(async () => {
@@ -80,19 +82,36 @@ export function DriverDataProvider({ children, driverId, driverUuid }: DriverDat
     try {
       console.log('Fetching projects for driver UUID:', driverUuid);
 
-      // Use the secure function that sets proper context for RLS
+      // Try to use the secure RPC function first
       const { data: projectsData, error: projectsError } = await supabase
         .rpc('get_driver_projects_with_context', {
           driver_uuid: driverUuid
         });
 
-      if (projectsError) {
+      // If RPC function doesn't exist, fall back to direct query
+      if (projectsError && projectsError.code === '42883') {
+        console.log('RPC function not found, using direct query');
+        const { data: directProjectsData, error: directProjectsError } = await supabase
+          .from('projects')
+          .select('*')
+          .eq('driver_id', driverUuid)
+          .order('date', { ascending: true })
+          .order('time', { ascending: true });
+
+        if (directProjectsError) {
+          console.error('Error fetching driver projects:', directProjectsError);
+          throw directProjectsError;
+        }
+
+        console.log('Fetched driver projects (direct):', directProjectsData?.length || 0, 'projects');
+        setProjects(directProjectsData || []);
+      } else if (projectsError) {
         console.error('Error fetching driver projects:', projectsError);
         throw projectsError;
+      } else {
+        console.log('Fetched driver projects (RPC):', projectsData?.length || 0, 'projects');
+        setProjects(projectsData || []);
       }
-
-      console.log('Fetched driver projects:', projectsData?.length || 0, 'projects');
-      setProjects(projectsData || []);
 
       console.log('Fetching companies...');
       const { data: companiesData, error: companiesError } = await supabase
@@ -119,6 +138,21 @@ export function DriverDataProvider({ children, driverId, driverUuid }: DriverDat
 
       console.log('Fetched car types:', carTypesData?.length || 0, 'car types');
       setCarTypes(carTypesData || []);
+
+      // Fetch driver info
+      console.log('Fetching driver info...');
+      const { data: driverData, error: driverError } = await supabase
+        .from('drivers')
+        .select('*')
+        .eq('id', driverUuid)
+        .maybeSingle();
+
+      if (driverError) {
+        console.error('Error fetching driver info:', driverError);
+      } else {
+        console.log('Fetched driver info:', driverData);
+        setDriverInfo(driverData);
+      }
 
       // Only update last_login if the column exists
       try {
@@ -151,30 +185,68 @@ export function DriverDataProvider({ children, driverId, driverUuid }: DriverDat
   const updateProjectStatus = useCallback(async (projectId: string, status: 'accepted' | 'started' | 'declined' | 'completed') => {
     try {
       console.log('Updating project status:', { projectId, status });
-      
-      // Use the secure function to update project status
-      const { data: updateResult, error } = await supabase
+
+      // Try to use the secure RPC function first
+      const { data: updateResult, error: rpcError } = await supabase
         .rpc('update_driver_project_status', {
           project_uuid: projectId,
           driver_uuid: driverUuid,
           new_status: status
         });
 
-      if (error) {
-        console.error('Database update error:', error);
-        throw error;
-      }
+      // If RPC function doesn't exist, fall back to direct update
+      if (rpcError && rpcError.code === '42883') {
+        console.log('RPC function not found, using direct update');
 
-      if (!updateResult) {
+        if (status === 'completed') {
+          const { error: directError } = await supabase
+            .from('projects')
+            .update({
+              status: 'completed',
+              completed_at: new Date().toISOString(),
+              completed_by: driverUuid
+            })
+            .eq('id', projectId)
+            .eq('driver_id', driverUuid);
+
+          if (directError) {
+            console.error('Database update error:', directError);
+            throw directError;
+          }
+        } else {
+          const { error: directError } = await supabase
+            .from('projects')
+            .update({
+              acceptance_status: status,
+              ...(status === 'accepted' ? {
+                accepted_at: new Date().toISOString(),
+                accepted_by: driverUuid
+              } : {}),
+              ...(status === 'started' ? {
+                started_at: new Date().toISOString()
+              } : {})
+            })
+            .eq('id', projectId)
+            .eq('driver_id', driverUuid);
+
+          if (directError) {
+            console.error('Database update error:', directError);
+            throw directError;
+          }
+        }
+      } else if (rpcError) {
+        console.error('Database update error:', rpcError);
+        throw rpcError;
+      } else if (!updateResult) {
         throw new Error('Failed to update project - project not found or not assigned to this driver');
       }
 
       // Update local state
       setProjects(prev => prev.map(project =>
-        project.id === projectId 
-          ? { 
-              ...project, 
-              ...(status === 'completed' 
+        project.id === projectId
+          ? {
+              ...project,
+              ...(status === 'completed'
                 ? { status: 'completed' }
                 : { acceptance_status: status }
               )
@@ -183,8 +255,8 @@ export function DriverDataProvider({ children, driverId, driverUuid }: DriverDat
       ));
 
       console.log(`Project ${projectId} status updated to ${status}`);
-      
-      // Note: The real-time subscription in the main DataContext will automatically 
+
+      // Note: The real-time subscription in the main DataContext will automatically
       // update the dashboard, so we don't need to manually refresh here
     } catch (err: any) {
       console.error('Failed to update project status:', err);
@@ -244,7 +316,8 @@ export function DriverDataProvider({ children, driverId, driverUuid }: DriverDat
     error,
     refreshProjects,
     updateProjectStatus,
-    retryCount
+    retryCount,
+    driverInfo
   };
 
   return (
