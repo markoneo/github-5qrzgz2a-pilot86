@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Upload, FileText, Bot, Loader2, CheckCircle, AlertCircle, X, Save } from 'lucide-react';
+import { Upload, FileText, Bot, Loader2, CheckCircle, AlertCircle, X, Save, Info, Mail } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useData } from '../contexts/DataContext';
 
@@ -350,6 +350,25 @@ Return ONLY the JSON array, no other text.`;
                 <p className="text-xs text-gray-500 mt-1">
                   Your API key is stored locally in your browser
                 </p>
+
+                <div className="mt-3 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div className="flex items-start gap-3">
+                    <Info className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                      <h4 className="text-sm font-semibold text-blue-900 mb-1">Need an API Key?</h4>
+                      <p className="text-sm text-blue-700 mb-2">
+                        To use the full potential of RidePilot AI Assistant, please contact us to receive your OpenAI API Key.
+                      </p>
+                      <a
+                        href="mailto:ridepilot.info@gmail.com?subject=Request%20for%20OpenAI%20API%20Key"
+                        className="inline-flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors"
+                      >
+                        <Mail className="w-4 h-4" />
+                        ridepilot.info@gmail.com
+                      </a>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               <div>
