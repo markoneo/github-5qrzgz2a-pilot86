@@ -554,7 +554,7 @@ export default function Dashboard() {
                 <p className="text-sm text-red-700">
                   Thank you for signing up! To continue using RidePilot dashboard and access all features,
                   please complete your subscription payment. Without an active subscription, access to the dashboard
-                  will be restricted. <strong>After 7 days, access will be blocked and it will not be possible to sign up with the same email account.</strong> Contact us if you need assistance.
+                  will be restricted. <strong>After 7 days, access will be blocked and it will not be possible to sign up with the same email account.</strong> We don't want you to lose any data. Contact us if you need assistance.
                 </p>
               </div>
               <button
