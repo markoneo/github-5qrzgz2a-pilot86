@@ -31,7 +31,8 @@ import {
   List,
   Map,
   Bot,
-  Settings2
+  Settings2,
+  AlertTriangle
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useData } from '../contexts/DataContext';
@@ -222,6 +223,10 @@ export default function Dashboard() {
     collapsible: true,
     defaultExpanded: false
   });
+  const [showSubscriptionNotice, setShowSubscriptionNotice] = useState(() => {
+    const dismissed = localStorage.getItem('subscription_notice_dismissed');
+    return !dismissed;
+  });
 
   // Memoized company color cache
   const [companyColorCache] = useState<Record<string, string>>({});
@@ -300,6 +305,11 @@ export default function Dashboard() {
       setIsRefreshing(false);
     }
   }, [refreshData]);
+
+  const handleDismissSubscriptionNotice = () => {
+    localStorage.setItem('subscription_notice_dismissed', 'true');
+    setShowSubscriptionNotice(false);
+  };
 
   const handleProjectAction = useCallback((projectId: string, action: string) => {
     switch (action) {
@@ -533,6 +543,32 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+
+      {showSubscriptionNotice && (
+        <div className="bg-red-50 border-b-2 border-red-200">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="w-6 h-6 text-red-600 flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <h3 className="text-base font-semibold text-red-900 mb-1">Subscription Required</h3>
+                <p className="text-sm text-red-700">
+                  Thank you for signing up! To continue using RidePilot dashboard and access all features,
+                  please complete your subscription payment. Without an active subscription, access to the dashboard
+                  will be restricted. Contact us if you need assistance.
+                </p>
+              </div>
+              <button
+                onClick={handleDismissSubscriptionNotice}
+                className="flex-shrink-0 p-1 text-red-600 hover:text-red-800 hover:bg-red-100 rounded transition-colors"
+                title="Dismiss notice"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-20 md:pb-8">
         {error && (
           <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4 flex items-center text-red-700">
