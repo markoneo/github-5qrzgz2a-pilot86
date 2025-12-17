@@ -32,7 +32,8 @@ import {
   Map,
   Bot,
   Settings2,
-  AlertTriangle
+  AlertTriangle,
+  Download
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useData } from '../contexts/DataContext';
@@ -44,6 +45,7 @@ import ProjectGrid from './enhanced/ProjectGrid';
 import ProjectListView from './enhanced/ProjectListView';
 
 import LocationAnalytics from './LocationAnalytics';
+import { exportProjectsToCSV, getTodayActiveProjects, getActiveProjects } from '../utils/exportUtils';
 
 // Memoized Enhanced Stats Card Component
 const EnhancedStatsCard = React.memo(({ stat, index }: { stat: any, index: number }) => {
@@ -366,6 +368,42 @@ export default function Dashboard() {
     }
   }, [logout, navigate]);
 
+  const handleExportTodayProjects = useCallback(() => {
+    const todayProjects = getTodayActiveProjects(
+      projects,
+      getCompanyName,
+      getDriverName,
+      getCarTypeName
+    );
+
+    if (todayProjects.length === 0) {
+      alert('No active projects scheduled for today');
+      return;
+    }
+
+    const today = new Date().toISOString().split('T')[0];
+    const filename = `daily-active-projects-${today}.csv`;
+    exportProjectsToCSV(todayProjects, filename);
+  }, [projects, getCompanyName, getDriverName, getCarTypeName]);
+
+  const handleExportAllActiveProjects = useCallback(() => {
+    const activeProjectsData = getActiveProjects(
+      projects,
+      getCompanyName,
+      getDriverName,
+      getCarTypeName
+    );
+
+    if (activeProjectsData.length === 0) {
+      alert('No active projects to export');
+      return;
+    }
+
+    const today = new Date().toISOString().split('T')[0];
+    const filename = `all-active-projects-${today}.csv`;
+    exportProjectsToCSV(activeProjectsData, filename);
+  }, [projects, getCompanyName, getDriverName, getCarTypeName]);
+
   // Active projects for display
   const activeProjects = useMemo(() => projects.filter(p => p.status === 'active'), [projects]);
 
@@ -453,6 +491,41 @@ export default function Dashboard() {
               </motion.button>
 
               <div className="flex items-center gap-2 overflow-x-auto">
+                {/* Export Dropdown */}
+                <div className="relative group">
+                  <button
+                    className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-gray-800 rounded-lg hover:bg-white/50 transition-colors flex-shrink-0"
+                    title="Export Projects"
+                  >
+                    <Download className="w-4 h-4" />
+                    <span className="text-sm">Export</span>
+                  </button>
+                  <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-xl border border-gray-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                    <div className="py-2">
+                      <button
+                        onClick={handleExportTodayProjects}
+                        className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors flex items-center gap-2"
+                      >
+                        <Calendar className="w-4 h-4" />
+                        <div>
+                          <div className="font-medium">Today's Active Projects</div>
+                          <div className="text-xs text-gray-500">Export projects scheduled for today</div>
+                        </div>
+                      </button>
+                      <button
+                        onClick={handleExportAllActiveProjects}
+                        className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors flex items-center gap-2"
+                      >
+                        <FileText className="w-4 h-4" />
+                        <div>
+                          <div className="font-medium">All Active Projects</div>
+                          <div className="text-xs text-gray-500">Export all active projects</div>
+                        </div>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
                 <button
                   onClick={handleManualRefresh}
                   disabled={isRefreshing}
