@@ -315,12 +315,13 @@ const DriverProjectCard = ({ project, companyName, carTypeName }: {
 };
 
 // Dashboard Content Component
-const DashboardContent = ({ driverName, onLogout }: { 
-  driverName: string; 
+const DashboardContent = ({ driverName, onLogout }: {
+  driverName: string;
   onLogout: () => void;
 }) => {
   const { projects, companies, carTypes, loading, error, refreshProjects, retryCount, driverInfo } = useDriverData();
   const [refreshing, setRefreshing] = useState(false);
+  const [activeTab, setActiveTab] = useState<'trips' | 'history'>('trips');
   
   // Debug info
   useEffect(() => {
@@ -394,14 +395,25 @@ const DashboardContent = ({ driverName, onLogout }: {
   }, [projects]);
 
   const stats = useMemo(() => {
-    const pending = projects.filter(p => p.acceptance_status === 'pending').length;
-    const accepted = projects.filter(p => p.acceptance_status === 'accepted').length;
+    const pending = projects.filter(p => p.acceptance_status === 'pending' && p.status !== 'completed').length;
+    const accepted = projects.filter(p => p.acceptance_status === 'accepted' && p.status !== 'completed').length;
+    const started = projects.filter(p => p.acceptance_status === 'started' && p.status !== 'completed').length;
     const completed = projects.filter(p => p.status === 'completed').length;
     const totalEarnings = projects
       .filter(p => p.status === 'completed')
       .reduce((sum, p) => sum + (p.driver_fee || p.price), 0);
 
-    return { pending, accepted, completed, totalEarnings };
+    return { pending, accepted, started, completed, totalEarnings };
+  }, [projects]);
+
+  const completedProjects = useMemo(() => {
+    return projects
+      .filter(p => p.status === 'completed')
+      .sort((a, b) => {
+        const dateA = new Date(`${a.date}T${a.time}`);
+        const dateB = new Date(`${b.date}T${b.time}`);
+        return dateB.getTime() - dateA.getTime();
+      });
   }, [projects]);
 
   if (loading) {
@@ -500,8 +512,8 @@ const DashboardContent = ({ driverName, onLogout }: {
           <div className="bg-white rounded-xl shadow-sm p-4 border border-gray-200">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Accepted</p>
-                <p className="text-2xl font-bold text-blue-600">{stats.accepted}</p>
+                <p className="text-sm text-gray-600">Active</p>
+                <p className="text-2xl font-bold text-blue-600">{stats.accepted + stats.started}</p>
               </div>
               <CheckCircle className="w-8 h-8 text-blue-500" />
             </div>
@@ -521,13 +533,44 @@ const DashboardContent = ({ driverName, onLogout }: {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600">Earnings</p>
-                <p className="text-xl font-bold text-purple-600">€{stats.totalEarnings.toFixed(0)}</p>
+                <p className="text-xl font-bold text-purple-600">{stats.totalEarnings.toFixed(0)}</p>
               </div>
               <DollarSign className="w-8 h-8 text-purple-500" />
             </div>
           </div>
         </div>
 
+        {/* Tab Navigation */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-1">
+          <div className="flex">
+            <button
+              onClick={() => setActiveTab('trips')}
+              className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg font-medium transition-all ${
+                activeTab === 'trips'
+                  ? 'bg-blue-600 text-white shadow-md'
+                  : 'text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              <Car className="w-5 h-5" />
+              <span>Active Trips</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('history')}
+              className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg font-medium transition-all ${
+                activeTab === 'history'
+                  ? 'bg-blue-600 text-white shadow-md'
+                  : 'text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              <Clock className="w-5 h-5" />
+              <span>History ({stats.completed})</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Active Trips Tab Content */}
+        {activeTab === 'trips' && (
+          <>
         {/* Project Categories */}
         {organizedProjects.urgent.length > 0 && (
           <div>
@@ -601,15 +644,15 @@ const DashboardContent = ({ driverName, onLogout }: {
           </div>
         )}
 
-        {/* No Projects State */}
-        {projects.length === 0 && (
+        {/* No Active Projects State */}
+        {organizedProjects.urgent.length === 0 && organizedProjects.today.length === 0 && organizedProjects.upcoming.length === 0 && (
           <div className="bg-white rounded-2xl shadow-lg p-12 text-center">
             <div className="bg-gray-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
               <Car className="w-8 h-8 text-gray-400" />
             </div>
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">No trips assigned yet</h3>
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">No active trips</h3>
             <p className="text-gray-600 mb-6">
-              Your dispatcher hasn't assigned any trips to you yet. Check back later or contact them directly.
+              You don't have any active trips at the moment. Check back later or contact your dispatcher.
             </p>
             <button
               onClick={handleRefresh}
@@ -620,42 +663,106 @@ const DashboardContent = ({ driverName, onLogout }: {
             </button>
           </div>
         )}
+          </>
+        )}
 
-        {/* Completed Trips Summary */}
-        {organizedProjects.completed.length > 0 && (
-          <div>
-            <div className="flex items-center space-x-3 mb-4">
-              <div className="bg-gray-100 p-2 rounded-lg">
-                <CheckCircle className="w-5 h-5 text-gray-600" />
-              </div>
-              <h2 className="text-xl font-bold text-gray-700">Recently Completed</h2>
-              <span className="bg-gray-100 text-gray-800 px-3 py-1 rounded-full text-sm font-medium">
-                {organizedProjects.completed.length} trip{organizedProjects.completed.length !== 1 ? 's' : ''}
-              </span>
-            </div>
-            
-            {/* Show only last 3 completed trips */}
-            <div className="grid gap-4 md:grid-cols-2">
-              {organizedProjects.completed.slice(0, 3).map(project => (
-                <div key={project.id} className="bg-white rounded-xl shadow-sm p-4 border border-gray-200 opacity-75">
-                  <div className="flex items-center justify-between mb-2">
-                    <h4 className="font-medium text-gray-900">{project.client_name}</h4>
-                    <span className="text-green-600 font-bold">€{(project.driver_fee || project.price).toFixed(2)}</span>
-                  </div>
-                  <p className="text-sm text-gray-600">{formatDate(project.date)} at {formatTime(project.time)}</p>
-                  <div className="flex items-center mt-2">
-                    <CheckCircle className="w-4 h-4 text-green-500 mr-1" />
-                    <span className="text-sm text-green-600 font-medium">Completed</span>
-                  </div>
+        {/* History Tab Content */}
+        {activeTab === 'history' && (
+          <div className="space-y-4">
+            {/* Earnings Summary */}
+            <div className="bg-gradient-to-r from-green-500 to-emerald-600 rounded-2xl p-6 text-white">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-green-100 text-sm font-medium">Total Earnings</p>
+                  <p className="text-4xl font-bold">{stats.totalEarnings.toFixed(2)}</p>
+                  <p className="text-green-100 text-sm mt-1">From {stats.completed} completed trips</p>
                 </div>
-              ))}
+                <div className="bg-white/20 p-4 rounded-xl">
+                  <TrendingUp className="w-10 h-10" />
+                </div>
+              </div>
             </div>
-            
-            {organizedProjects.completed.length > 3 && (
-              <div className="text-center mt-4">
-                <span className="text-sm text-gray-500">
-                  {organizedProjects.completed.length - 3} more completed trips
-                </span>
+
+            {/* History Header */}
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-bold text-gray-900">Trip History</h2>
+              <span className="text-sm text-gray-500">{completedProjects.length} trips</span>
+            </div>
+
+            {/* Completed Trips List */}
+            {completedProjects.length > 0 ? (
+              <div className="space-y-3">
+                {completedProjects.map(project => (
+                  <motion.div
+                    key={project.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="bg-white rounded-xl shadow-sm border border-gray-200 p-4"
+                  >
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex-1">
+                        <h4 className="font-semibold text-gray-900">{project.client_name}</h4>
+                        <p className="text-sm text-gray-500">
+                          {formatDate(project.date)} at {formatTime(project.time)}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-xl font-bold text-green-600">
+                          {(project.driver_fee || project.price).toFixed(2)}
+                        </span>
+                        <div className="flex items-center justify-end mt-1">
+                          <CheckCircle className="w-4 h-4 text-green-500 mr-1" />
+                          <span className="text-xs text-green-600 font-medium">Completed</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2 text-sm">
+                      <div className="flex items-start gap-2">
+                        <MapPin className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                        <span className="text-gray-600">{project.pickup_location}</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <MapPin className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" />
+                        <span className="text-gray-600">{project.dropoff_location}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-4 mt-3 pt-3 border-t border-gray-100 text-sm text-gray-500">
+                      <div className="flex items-center gap-1">
+                        <Users className="w-4 h-4" />
+                        <span>{project.passengers} passenger{project.passengers !== 1 ? 's' : ''}</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Car className="w-4 h-4" />
+                        <span>{getCarTypeName(project.car_type_id)}</span>
+                      </div>
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                        project.payment_status === 'paid'
+                          ? 'bg-green-100 text-green-700'
+                          : 'bg-orange-100 text-orange-700'
+                      }`}>
+                        {project.payment_status === 'paid' ? 'Paid' : 'Charged'}
+                      </span>
+                    </div>
+
+                    {project.booking_id && (
+                      <p className="text-xs text-gray-400 mt-2">
+                        Ref: {project.booking_id}
+                      </p>
+                    )}
+                  </motion.div>
+                ))}
+              </div>
+            ) : (
+              <div className="bg-white rounded-2xl shadow-lg p-12 text-center">
+                <div className="bg-gray-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Clock className="w-8 h-8 text-gray-400" />
+                </div>
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">No completed trips yet</h3>
+                <p className="text-gray-600">
+                  Your completed trips will appear here. Complete your first trip to start building your history!
+                </p>
               </div>
             )}
           </div>
