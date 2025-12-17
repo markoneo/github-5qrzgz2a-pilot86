@@ -121,11 +121,6 @@ const DriverProjectCard = ({ project, companyName, carTypeName }: {
             <div className="text-2xl font-bold text-green-600">
               €{displayPrice.toFixed(2)}
             </div>
-            {project.driver_fee && project.driver_fee !== project.price && (
-              <div className="text-xs text-gray-500">
-                Trip fee (Total: €{project.price.toFixed(2)})
-              </div>
-            )}
           </div>
         </div>
 
