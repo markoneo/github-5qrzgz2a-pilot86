@@ -74,13 +74,25 @@ The CSV export includes the following fields:
 
 ### Export Options
 
-**1. Today's Active Projects**
+**1. Today**
 - Exports only projects scheduled for the current day
 - Filters by date matching today's date
 - Status must be "active"
-- Filename format: `daily-active-projects-YYYY-MM-DD.csv`
+- Filename format: `active-projects-YYYY-MM-DD.csv`
 
-**2. All Active Projects**
+**2. Tomorrow**
+- Exports only projects scheduled for tomorrow
+- Automatically calculates tomorrow's date
+- Status must be "active"
+- Filename format: `active-projects-YYYY-MM-DD.csv`
+
+**3. Custom Date**
+- Opens a date picker to select any specific date
+- Exports projects scheduled for the selected date
+- Status must be "active"
+- Filename format: `active-projects-YYYY-MM-DD.csv`
+
+**4. All Active Projects**
 - Exports all projects with "active" status
 - Includes projects from any date
 - Useful for comprehensive reporting
@@ -97,18 +109,29 @@ The CSV export includes the following fields:
    - Find the "Export" button in the top header area
    - Located next to the "Refresh" button
 
-3. **Choose Export Option**
-   - Hover over the "Export" button to reveal dropdown menu
-   - Select one of two options:
-     - **Today's Active Projects** - Only today's scheduled rides
+3. **Click Export Button**
+   - Click on the "Export" button to open the dropdown menu
+   - Menu displays with multiple export options
+
+4. **Choose Export Option**
+   - **Export by Date:**
+     - **Today** - Only today's scheduled rides
+     - **Tomorrow** - Only tomorrow's scheduled rides
+     - **Custom Date** - Choose any specific date:
+       1. Click "Custom Date" option
+       2. Date picker appears below
+       3. Select desired date from calendar
+       4. Click "Export Selected Date" button
+
+   - **Export All:**
      - **All Active Projects** - All active rides regardless of date
 
-4. **Download Completes**
+5. **Download Completes**
    - CSV file downloads automatically
    - File is saved to your default downloads folder
-   - Filename includes the current date for easy identification
+   - Filename includes the specific date for easy identification
 
-5. **Open the File**
+6. **Open the File**
    - Open with Excel, Google Sheets, Numbers, or any spreadsheet app
    - Data is organized in columns with headers
    - Can be filtered, sorted, and analyzed as needed
