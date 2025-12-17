@@ -476,6 +476,33 @@ export default function Dashboard() {
     setSelectedExportDate('');
   }, [selectedExportDate, projects, getCompanyName, getDriverName, getCarTypeName]);
 
+  const handleExportDateProjects = useCallback((date: string) => {
+    const dateProjects = projects
+      .filter(project => project.status === 'active' && project.date === date)
+      .map(project => ({
+        bookingId: project.bookingId,
+        pickupLocation: project.pickupLocation,
+        dropoffLocation: project.dropoffLocation,
+        time: project.time,
+        date: project.date,
+        clientName: project.clientName,
+        carType: getCarTypeName(project.carType),
+        passengers: project.passengers,
+        driverAssigned: getDriverName(project.driver),
+        price: project.price,
+        paymentStatus: project.paymentStatus,
+        company: getCompanyName(project.company)
+      }));
+
+    if (dateProjects.length === 0) {
+      alert(`No active projects scheduled for ${date}`);
+      return;
+    }
+
+    const filename = `active-projects-${date}.csv`;
+    exportProjectsToCSV(dateProjects, filename);
+  }, [projects, getCompanyName, getDriverName, getCarTypeName]);
+
   // Active projects for display
   const activeProjects = useMemo(() => projects.filter(p => p.status === 'active'), [projects]);
 
@@ -959,6 +986,7 @@ export default function Dashboard() {
                       getCompanyTheme={getCompanyColorTheme}
                       startedProjects={startedProjects}
                       cardSettings={cardSettings}
+                      onExportDate={handleExportDateProjects}
                     />
                   ) : viewMode === 'list' ? (
                     <ProjectListView
@@ -971,6 +999,7 @@ export default function Dashboard() {
                       getDriverName={getDriverName}
                       getCarTypeName={getCarTypeName}
                       getCompanyTheme={getCompanyColorTheme}
+                      onExportDate={handleExportDateProjects}
                     />
                   ) : null}
                 </div>

@@ -1,9 +1,9 @@
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Filter, 
-  Search, 
-  SortAsc, 
+import {
+  Filter,
+  Search,
+  SortAsc,
   Calendar,
   MapPin,
   Users,
@@ -11,7 +11,8 @@ import {
   X,
   ChevronDown,
   Clock,
-  AlertCircle
+  AlertCircle,
+  Download
 } from 'lucide-react';
 import ProjectCard from './ProjectCard';
 
@@ -48,6 +49,7 @@ interface ProjectGridProps {
     collapsible: boolean;
     defaultExpanded: boolean;
   };
+  onExportDate?: (date: string) => void;
 }
 
 // Memoized Project Card wrapper
@@ -63,7 +65,8 @@ export default function ProjectGrid({
   getDriverName,
   getCarTypeName,
   getCompanyTheme,
-  cardSettings = { collapsible: false, defaultExpanded: true }
+  cardSettings = { collapsible: false, defaultExpanded: true },
+  onExportDate
 }: ProjectGridProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCompany, setSelectedCompany] = useState('');
@@ -323,7 +326,20 @@ export default function ProjectGrid({
                         </div>
                       </div>
                       
-                      <div className="text-right">
+                      <div className="flex items-center gap-3">
+                        {onExportDate && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onExportDate(dateKey);
+                            }}
+                            className="bg-white/20 hover:bg-white/30 backdrop-blur-sm px-4 py-2 rounded-xl transition-all flex items-center gap-2 group"
+                            title="Export projects for this date"
+                          >
+                            <Download className="w-5 h-5 text-white group-hover:scale-110 transition-transform" />
+                            <span className="text-white text-sm font-medium">Export</span>
+                          </button>
+                        )}
                         <div className="bg-white/20 backdrop-blur-sm px-4 py-2 rounded-xl">
                           <span className="text-2xl font-bold text-white">{totalProjectsOnDate}</span>
                           <p className="text-white/90 text-sm">trip{totalProjectsOnDate !== 1 ? 's' : ''}</p>

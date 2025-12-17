@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo } from 'react';
-import { ChevronDown, ChevronRight, Users, Calendar, DollarSign, MapPin, Phone, Car, User, Clock, Eye, Edit, Trash2, Play, Receipt } from 'lucide-react';
+import { ChevronDown, ChevronRight, Users, Calendar, DollarSign, MapPin, Phone, Car, User, Clock, Eye, Edit, Trash2, Play, Receipt, Download } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface Project {
@@ -30,6 +30,7 @@ interface ProjectListViewProps {
   getDriverName: (id: string) => string;
   getCarTypeName: (id: string) => string;
   getCompanyTheme: (companyId: string) => string;
+  onExportDate?: (date: string) => void;
 }
 
 interface ListItemProps {
@@ -336,7 +337,8 @@ export default function ProjectListView({
   getCompanyName,
   getDriverName,
   getCarTypeName,
-  getCompanyTheme
+  getCompanyTheme,
+  onExportDate
 }: ProjectListViewProps) {
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
   const [expandAll, setExpandAll] = useState(false);
@@ -478,8 +480,8 @@ export default function ProjectListView({
                       {formatDateHeader(date)}
                     </h3>
                     <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                      dateStatus === 'today' ? 'bg-blue-100 text-blue-800' : 
-                      dateStatus === 'tomorrow' ? 'bg-orange-100 text-orange-800' : 
+                      dateStatus === 'today' ? 'bg-blue-100 text-blue-800' :
+                      dateStatus === 'tomorrow' ? 'bg-orange-100 text-orange-800' :
                       dateStatus === 'past' ? 'bg-gray-100 text-gray-600' : 'bg-gray-50 text-gray-700'
                     }`}>
                       {dateProjects.length} trip{dateProjects.length !== 1 ? 's' : ''}
@@ -491,12 +493,27 @@ export default function ProjectListView({
                       </span>
                     )}
                   </div>
-                  <div className="text-[#fafbff] text-[18px]">
-                    {new Date(date).toLocaleDateString('en-US', { 
-                      month: 'short', 
-                      day: 'numeric',
-                      year: 'numeric'
-                    })}
+                  <div className="flex items-center gap-4">
+                    {onExportDate && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onExportDate(date);
+                        }}
+                        className="bg-white/20 hover:bg-white/30 backdrop-blur-sm px-4 py-2 rounded-xl transition-all flex items-center gap-2 group"
+                        title="Export projects for this date"
+                      >
+                        <Download className="w-4 h-4 text-white group-hover:scale-110 transition-transform" />
+                        <span className="text-white text-sm font-medium">Export</span>
+                      </button>
+                    )}
+                    <div className="text-[#fafbff] text-[18px]">
+                      {new Date(date).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric'
+                      })}
+                    </div>
                   </div>
                 </div>
               </div>

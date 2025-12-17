@@ -102,6 +102,28 @@ The CSV export includes the following fields:
 
 ### How to Export Projects
 
+There are **TWO WAYS** to export projects:
+
+#### Method 1: Export Button on Each Date Header (RECOMMENDED)
+
+This is the easiest and most intuitive way to export projects for a specific date.
+
+1. **Scroll to the Date Section**
+   - On the Dashboard, projects are grouped by date
+   - Each date has a header showing the day name and date (e.g., "Saturday, December 20, 2025")
+
+2. **Click Export Button**
+   - On the right side of each date header, you'll see an "Export" button
+   - Click it to instantly download CSV for that specific date
+
+3. **Download Completes**
+   - CSV file downloads automatically with all projects for that date
+   - Filename format: `active-projects-YYYY-MM-DD.csv`
+
+#### Method 2: Global Export Menu (Top Header)
+
+This method provides more options for bulk exports.
+
 1. **Access the Dashboard**
    - Navigate to the main dashboard
 
@@ -131,10 +153,11 @@ The CSV export includes the following fields:
    - File is saved to your default downloads folder
    - Filename includes the specific date for easy identification
 
-6. **Open the File**
-   - Open with Excel, Google Sheets, Numbers, or any spreadsheet app
-   - Data is organized in columns with headers
-   - Can be filtered, sorted, and analyzed as needed
+#### Opening the Exported File
+
+- Open with Excel, Google Sheets, Numbers, or any spreadsheet app
+- Data is organized in columns with headers
+- Can be filtered, sorted, and analyzed as needed
 
 ### Sample CSV Output
 
